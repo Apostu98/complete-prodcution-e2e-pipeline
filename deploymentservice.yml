@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: complete-prodcution-e2e-pipeline
-          image: dekatur/complete-prodcution-e2e-pipeline::1.0.0-21 # Image that will be used to containers in the cluster
+          image: dekatur/complete-prodcution-e2e-pipeline::latest # Image that will be used to containers in the cluster
           imagePullPolicy: Always
           ports:
             - containerPort: 8080 # The port that the container is running on in the cluster
