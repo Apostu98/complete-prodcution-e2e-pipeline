@@ -41,11 +41,6 @@ body {
     gap: 10px;
 }
 
-/* Update the YouTube icon color to red */
-.youtube {
-    color: red;
-}
-
 /* Update the GitHub icon color to black */
 .github {
     color: black;

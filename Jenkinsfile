@@ -1,5 +1,5 @@
-pipeline{
-    agent{
+pipeline {
+    agent {
         label "jenkins-agent"
     }
     tools {
@@ -9,42 +9,36 @@ pipeline{
     environment {
         APP_NAME = "complete-prodcution-e2e-pipeline"
         RELEASE = "1.0.0"
-        DOCKER_USER = "dmancloud"
-        DOCKER_PASS = 'dockerhub'
-        IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
+        DOCKER_USER = "dekatur"
+        DOCKER_PASS = "dockerhub"
+        IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}" 
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
-        JENKINS_API_TOKEN = credentials("JENKINS_API_TOKEN")
-
     }
-    stages{
-        stage("Cleanup Workspace"){
+    stages {
+        stage("Cleanup Workspace") {
             steps {
                 cleanWs()
             }
-
         }
-    
-        stage("Checkout from SCM"){
+
+        stage("Checkout from SCM") {
             steps {
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Apostu98/complete-prodcution-e2e-pipeline.git'
             }
-
         }
 
-        stage("Build Application"){
+        stage("Build Application") {
             steps {
                 sh "mvn clean package"
             }
-
         }
 
-        stage("Test Application"){
+        stage("Test Application") {
             steps {
                 sh "mvn test"
             }
-
         }
-        
+
         stage("Sonarqube Analysis") {
             steps {
                 script {
@@ -53,7 +47,6 @@ pipeline{
                     }
                 }
             }
-
         }
 
         stage("Quality Gate") {
@@ -62,7 +55,6 @@ pipeline{
                     waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonarqube-token'
                 }
             }
-
         }
 
         stage("Build & Push Docker Image") {
@@ -78,49 +70,15 @@ pipeline{
                     }
                 }
             }
-
         }
 
-        stage("Trivy Scan") {
+        stage("Kubernetes Deploy") {
             steps {
-                script {
-		   sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image dmancloud/complete-prodcution-e2e-pipeline:1.0.0-22 --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
-                }
-            }
-
-        }
-
-        stage ('Cleanup Artifacts') {
-            steps {
-                script {
-                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker rmi ${IMAGE_NAME}:latest"
+                withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8-token', namespace: 'demoapp', restrictKubeConfigAccess: false, serverUrl: 'https://172.31.41.114:6443') {
+                    sh "kubectl apply -f deploymentservice.yml -n demoapp"
+                    sh "kubectl get svc -n demoapp"
                 }
             }
         }
-
-
-        stage("Trigger CD Pipeline") {
-            steps {
-                script {
-                    sh "curl -v -k --user admin:${JENKINS_API_TOKEN} -X POST -H 'cache-control: no-cache' -H 'content-type: application/x-www-form-urlencoded' --data 'IMAGE_TAG=${IMAGE_TAG}' 'https://jenkins.dev.dman.cloud/job/gitops-complete-pipeline/buildWithParameters?token=gitops-token'"
-                }
-            }
-
-        }
-
-    }
-
-    post {
-        failure {
-            emailext body: '''${SCRIPT, template="groovy-html.template"}''', 
-                    subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Failed", 
-                    mimeType: 'text/html',to: "dmistry@yourhostdirect.com"
-            }
-         success {
-               emailext body: '''${SCRIPT, template="groovy-html.template"}''', 
-                    subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - Successful", 
-                    mimeType: 'text/html',to: "dmistry@yourhostdirect.com"
-          }      
     }
 }

@@ -1,4 +1,3 @@
-# Sample application for e2e DevOps Pipeline
-## This is a sample application to demonstrate an end to end DevOps Pipeline
-
+# Aplicatie prin care se demostreaza utilizarea cunostintelor de CI/CD utilizand Jenkins.
+## Java aplication source code: https://github.com/dmancloud
 
